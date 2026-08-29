@@ -1,0 +1,63 @@
+:root {
+  color-scheme: dark;
+  --bg: #0b0b0d;
+  --card: #141418;
+  --fg: #f4f4f5;
+  --muted: #9b9ba3;
+  --line: #2a2a31;
+  --ok: #35c07f;
+  --warn: #e8b23a;
+  --bad: #e2564d;
+  --accent: #5b8cff;
+}
+
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: ui-sans-serif, system-ui, -apple-system, "Helvetica Neue", sans-serif;
+  overscroll-behavior-y: contain;
+}
+
+button, input {
+  font: inherit;
+  color: inherit;
+}
+
+button { cursor: pointer; }
+
+.btn {
+  display: block;
+  width: 100%;
+  padding: .95rem 1rem;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: var(--card);
+  font-weight: 600;
+}
+
+.btn-primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+.btn:disabled { opacity: .5; }
+
+.input {
+  width: 100%;
+  padding: .9rem 1rem;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: var(--card);
+}
+
+.card {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 1rem;
+}

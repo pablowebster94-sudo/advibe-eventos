@@ -1,0 +1,12 @@
+{
+  "name": "advibe-eventos",
+  "private": true,
+  "version": "0.1.0",
+  "workspaces": ["apps/*"],
+  "scripts": {
+    "dev:backend": "npm run dev --workspace @advibe/backend",
+    "dev:capture": "npm run dev --workspace @advibe/capture",
+    "db:push": "npm run db:push --workspace @advibe/backend",
+    "seed": "npm run seed --workspace @advibe/backend"
+  }
+}

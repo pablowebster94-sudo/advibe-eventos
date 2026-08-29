@@ -1,0 +1,43 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Event {
+  id        String   @id @default(cuid())
+  slug      String   @unique
+  name      String
+  /// Token que el operador escribe en la PWA. Es el credencial del evento.
+  token     String   @unique
+  brandName String?
+  createdAt DateTime @default(now())
+  photos    Photo[]
+}
+
+model Photo {
+  id      String @id @default(cuid())
+  eventId String
+  event   Event  @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  /// Generada por el cliente al encolar. Deduplica reintentos de la cola offline:
+  /// subir dos veces la misma foto devuelve la primera, no crea otra fila.
+  idempotencyKey String
+  /// Identifica el dispositivo, para saber qué celular subió qué.
+  clientId       String
+
+  filename      String
+  thumbFilename String
+  width         Int
+  height        Int
+  bytes         Int
+
+  capturedAt DateTime?
+  createdAt  DateTime  @default(now())
+
+  @@unique([eventId, idempotencyKey])
+  @@index([eventId, createdAt])
+}
