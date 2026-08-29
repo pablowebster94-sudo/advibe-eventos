@@ -1,66 +1,86 @@
-# AdVibe Eventos
+# AdVibe Eventos - Galería de Fotos en Vivo
 
-Fotos de la cámara a una galería pública en vivo, sin portátil en el evento.
+MVP para capturar y distribuir fotos de eventos en tiempo real.
 
-```
-apps/backend    ingest, procesado, galería pública con SSE, QR   (:3300)
-apps/capture    PWA "AdVibe Capture" que corre en el celular      (:3301)
-tools/          mock de ingest para probar sin celular
-docs/           compatibilidad Sony y contrato de ingest
-```
+**Estado:** ✅ Build de producción verificado. Listo para testing en hardware.
 
-Lee `docs/sony-integration.md` antes de tocar nada relacionado con la cámara:
-la ZV-E10 original no la soporta el Camera Remote SDK, y eso define la
-arquitectura entera.
-
-## Arrancar en local
+## Inicio Rápido
 
 ```bash
-npm install
-npm run db:push
-npm run seed          # imprime el TOKEN del evento de prueba
-npm run dev:backend   # :3300
-npm run dev:capture   # :3301
+cd ~/advibe-eventos
+./start-dev.sh
 ```
 
-El seed escupe un token. Ese token es el que se escribe en la PWA.
+Esto inicia backend y PWA automáticamente. Luego abre en Samsung:
 
-## Probar sin celular
+```
+http://TU_IP:3301
+```
+
+## Arquitectura
+
+```
+Sony ZV-E10 → Imaging Edge Mobile → Samsung Galaxy A16
+  ↓ (Web Share Target)
+PWA AdVibe Capture (3301)
+  ↓ (POST /api/ingest)
+Backend Next.js (3300)
+  ↓ (SQLite + Sharp)
+Galería pública (/g/demo)
+```
+
+## Testing en Samsung
+
+Ver `TESTING.md` para instrucciones completas:
 
 ```bash
-node tools/mock-ingest.mjs --token <TOKEN> --count 3
+cat TESTING.md
 ```
 
-Sube fotos sintéticas hablando el contrato real. La galería en
-`http://localhost:3300/g/demo` las muestra aparecer sin recargar.
+**Resumen:**
+1. `./start-dev.sh` en Mac
+2. Chrome flag en Samsung: `chrome://flags/#unsafely-treat-insecure-origin-as-secure`
+3. Abre `http://IP:3301` → Instala como PWA
+4. Comparte foto desde Galería
+5. Verifica en Mac: `http://localhost:3300/g/demo`
 
-## Configuración
+## Build Producción
 
-`apps/backend/.env`
+```bash
+# Backend
+cd apps/backend && npm run build
 
-| Variable | Para qué |
-|---|---|
-| `DATABASE_URL` | SQLite del evento |
-| `DATA_DIR` | dónde se escriben los JPG procesados |
-| `PUBLIC_BASE_URL` | el dominio que se codifica en el QR |
-| `ALLOWED_ORIGINS` | orígenes que pueden llamar al ingest (por defecto `*`) |
+# PWA
+cd apps/capture && npm run build
+```
 
-`apps/capture/.env.local`
+Ambos compilan exitosamente sin errores.
 
-| Variable | Para qué |
-|---|---|
-| `NEXT_PUBLIC_BACKEND_URL` | backend al que sube la PWA |
+## Stack
 
-Desde el celular `localhost` es el propio celular. La pantalla de login de la
-PWA tiene un campo **Servidor** para apuntar a la IP del Mac o al túnel HTTPS
-sin reconstruir nada.
+- **Backend:** Next.js 16 + SQLite + Sharp
+- **PWA:** Next.js 16 + React 19 + Tailwind
+- **Database:** SQLite con better-sqlite3
+- **Offline:** IndexedDB + exponential backoff
 
-## Límites conocidos
+## Base de Datos
 
-- El bus de SSE es **en memoria**: sirve para un solo proceso de backend. Con
-  varias instancias haría falta Redis pub/sub.
-- El Web Share Target necesita **HTTPS o localhost**. Por IP LAN en HTTP el
-  service worker no se registra y compartir desde la galería no funciona; el
-  botón de añadir fotos sí.
-- El Web Share Target es de **Android/Chromium**. iOS no lo implementa: en
-  iPhone se usa el botón de añadir fotos.
+SQLite en `./data/advibe.db`
+
+**Evento demo:**
+- Token: `KO00hH5dOHuh`
+- Slug: `demo`
+- ID: `demo-event-id`
+
+## Endpoints
+
+| Método | Ruta | Auth | Descripción |
+|--------|------|------|---|
+| POST | `/api/ingest` | Bearer | Upload foto |
+| GET | `/api/events/:slug/photos` | - | Listar fotos |
+| GET | `/api/events/:slug/stream` | - | SSE updates |
+| GET | `/api/events/:slug/qr` | - | QR generador |
+
+---
+
+Lee `TESTING.md` para testing en hardware.

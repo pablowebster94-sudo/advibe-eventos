@@ -26,7 +26,7 @@ export default async function GalleryPage({
       slug={event.slug}
       name={event.name}
       qrUrl={`${PUBLIC_BASE_URL}/api/events/${event.slug}/qr`}
-      initial={photos.map((p) => ({
+      initial={photos.map((p: any) => ({
         id: p.id,
         url: `/media/${p.filename}`,
         thumbUrl: `/media/${p.thumbFilename}`,

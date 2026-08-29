@@ -1,8 +1,2 @@
-import { PrismaClient } from "@prisma/client";
-
-// Next recarga módulos en dev; sin este singleton se abren decenas de conexiones.
-const globalForPrisma = globalThis as unknown as { prisma?: PrismaClient };
-
-export const prisma = globalForPrisma.prisma ?? new PrismaClient();
-
-if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;
+// Exportar la abstracción de base de datos SQLite (reemplaza Prisma)
+export { database as prisma } from "./database";

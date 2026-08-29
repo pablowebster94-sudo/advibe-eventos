@@ -31,7 +31,7 @@ export async function GET(
   return json(request, {
     ok: true,
     event: { slug: event.slug, name: event.name },
-    photos: photos.map((p) => ({
+    photos: photos.map((p: any) => ({
       id: p.id,
       url: `/media/${p.filename}`,
       thumbUrl: `/media/${p.thumbFilename}`,

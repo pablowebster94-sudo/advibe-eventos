@@ -1,4 +1,4 @@
-import { prisma } from "./db";
+import { database as prisma } from "./database";
 
 /** El token del evento es el mismo credencial que iba a usar el bridge de portátil.
  *  Viaja como `Authorization: Bearer <token>`. Un token identifica un evento entero,

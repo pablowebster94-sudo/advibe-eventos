@@ -1,3 +1,4 @@
+import cuid from "cuid";
 import { eventFromRequest } from "@/lib/auth";
 import { publishPhoto } from "@/lib/bus";
 import { json, preflight } from "@/lib/cors";
@@ -86,6 +87,7 @@ export async function POST(request: Request) {
   try {
     created = await prisma.photo.create({
       data: {
+        id: cuid(),
         eventId: event.id,
         idempotencyKey,
         clientId,
