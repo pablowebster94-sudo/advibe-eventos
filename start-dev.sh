@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# start-dev.sh - Inicia backend y PWA en dos terminales tmux
+# start-dev.sh - Inicia backend y PWA sin dependencias externas
 
 set -e
 
@@ -22,42 +22,56 @@ if [ -z "$IP" ]; then
 fi
 
 echo "🚀 AdVibe Eventos - Dev Servers"
-echo "===============================\n"
+echo "═══════════════════════════════\n"
 echo "📱 IP de tu Mac: $IP"
 echo "\n✅ Backend:  http://$IP:3300"
 echo "✅ PWA:      http://$IP:3301"
 echo "✅ Galería:  http://localhost:3300/g/demo\n"
 echo "En el Samsung usa:  http://$IP:3301\n"
 
-# Crea sesión tmux
-SESSION="advibe-dev"
+# Cleanup en caso de cierre
+cleanup() {
+    echo ""
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    echo "🛑 Deteniendo servidores..."
+    kill $BACKEND_PID 2>/dev/null || true
+    kill $PWA_PID 2>/dev/null || true
+    echo "✅ Servidores detenidos"
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+}
 
-if tmux has-session -t $SESSION 2>/dev/null; then
-    echo "⚠️  Sesión $SESSION ya existe. Matando..."
-    tmux kill-session -t $SESSION
-fi
+# Registra trap para limpiar al salir
+trap cleanup EXIT INT TERM
 
-# Nueva sesión con 2 ventanas
-tmux new-session -d -s $SESSION -n backend
-tmux new-window -t $SESSION -n capture
+# Inicia backend en background
+echo "⏳ Iniciando Backend (npm run dev:backend)..."
+npm run dev:backend > .backend.log 2>&1 &
+BACKEND_PID=$!
+sleep 3
 
-# Backend en ventana 1
-tmux send-keys -t $SESSION:backend "cd $(pwd) && npm run dev:backend" Enter
-sleep 2
+# Inicia PWA en background
+echo "⏳ Iniciando PWA (npm run dev:capture)..."
+npm run dev:capture > .capture.log 2>&1 &
+PWA_PID=$!
+sleep 3
 
-# PWA en ventana 2
-tmux send-keys -t $SESSION:capture "cd $(pwd) && npm run dev:capture" Enter
-sleep 2
-
+echo ""
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-echo "✨ Ambos servidores iniciados en tmux"
+echo "✨ Ambos servidores iniciados en background"
 echo ""
-echo "Para ver logs:"
-echo "  tmux attach -t $SESSION:backend    # Backend"
-echo "  tmux attach -t $SESSION:capture    # PWA"
+echo "Backend PID: $BACKEND_PID"
+echo "PWA PID:    $PWA_PID"
 echo ""
-echo "Para matar todo:"
-echo "  tmux kill-session -t $SESSION"
+echo "Logs:"
+echo "  tail -f .backend.log   # Backend logs"
+echo "  tail -f .capture.log   # PWA logs"
+echo ""
+echo "Para detener: Presiona Ctrl+C"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo ""
 echo "📖 Lee TESTING.md para pruebas en Samsung"
+echo ""
+
+# Espera a que ambos procesos terminen
+wait $BACKEND_PID 2>/dev/null || true
+wait $PWA_PID 2>/dev/null || true
