@@ -100,7 +100,8 @@ export async function POST(request: Request) {
           capturedAt && !Number.isNaN(capturedAt.valueOf()) ? capturedAt : null,
       },
     });
-  } catch {
+  } catch (e) {
+    console.error('Ingest error:', e);
     // Dos reintentos en paralelo pueden cruzarse aquí; gana el que insertó primero.
     const raced = await prisma.photo.findUnique({
       where: { eventId_idempotencyKey: { eventId: event.id, idempotencyKey } },

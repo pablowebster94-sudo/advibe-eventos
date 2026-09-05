@@ -1,0 +1,12 @@
+// Reemplaza líneas 103-110
+  } catch (e) {
+    // Dos reintentos en paralelo pueden cruzarse aquí; gana el que insertó primero.
+    const raced = await prisma.photo.findFirst({
+      where: { eventId: event.id, idempotencyKey },
+    });
+    if (!raced) {
+      console.error("Ingest error:", e);
+      throw new Error("ingest: insert failed without a racing row");
+    }
+    return json(request, { ok: true, duplicate: true, photo: serialize(raced) });
+  }

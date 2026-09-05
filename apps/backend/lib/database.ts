@@ -131,7 +131,7 @@ export const database = {
       const stmt = db.prepare(
         "INSERT INTO Photo (id, eventId, idempotencyKey, clientId, filename, thumbFilename, width, height, bytes, capturedAt, createdAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)"
       );
-      stmt.run(id, eventId, idempotencyKey, clientId, filename, thumbFilename, width, height, bytes, capturedAt || null);
+      stmt.run(id, eventId, idempotencyKey, clientId, filename, thumbFilename, width, height, bytes, capturedAt ? new Date(capturedAt).toISOString() : null);
 
       return database.photo.findUnique({ where: { id } })!;
     },

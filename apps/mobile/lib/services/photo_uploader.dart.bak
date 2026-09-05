@@ -1,0 +1,168 @@
+import 'package:flutter/foundation.dart';
+import 'package:file_picker/file_picker.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:crypto/crypto.dart';
+import 'package:http/http.dart' as http;
+import 'dart:io';
+import 'dart:async';
+import 'package:logger/logger.dart';
+import 'package:uuid/uuid.dart';
+
+class PhotoUploader extends ChangeNotifier {
+  final logger = Logger();
+  late SharedPreferences _prefs;
+  
+  String serverUrl = 'http://192.168.1.7:3300';
+  String eventToken = 'KO00hH5dOHuh';
+  String eventId = 'demo-event-id';
+  
+  int photosInQueue = 0;
+  int photosUploaded = 0;
+  bool isMonitoring = false;
+  String? lastError;
+  
+  Timer? _monitoringTimer;
+  Set<String> _uploadedHashes = {};
+  
+  @override
+  void dispose() {
+    _monitoringTimer?.cancel();
+    super.dispose();
+  }
+  
+  Future<void> initialize() async {
+    _prefs = await SharedPreferences.getInstance();
+    _loadUploadedHashes();
+  }
+  
+  void _loadUploadedHashes() {
+    final hashes = _prefs.getStringList('uploaded_hashes') ?? [];
+    _uploadedHashes = hashes.toSet();
+  }
+  
+  Future<void> _saveUploadedHash(String hash) async {
+    _uploadedHashes.add(hash);
+    await _prefs.setStringList('uploaded_hashes', _uploadedHashes.toList());
+  }
+  
+  /// Inicia monitoreo de carpeta USB
+  Future<void> startMonitoring(String usbPath) async {
+    if (isMonitoring) {
+      logger.w('Monitoring already active');
+      return;
+    }
+    
+    isMonitoring = true;
+    logger.i('Started monitoring: $usbPath');
+    notifyListeners();
+    
+    // Monitorea cada 2 segundos
+    _monitoringTimer = Timer.periodic(Duration(seconds: 2), (_) async {
+      await _checkForNewPhotos(usbPath);
+    });
+  }
+  
+  Future<void> stopMonitoring() async {
+    _monitoringTimer?.cancel();
+    isMonitoring = false;
+    logger.i('Stopped monitoring');
+    notifyListeners();
+  }
+  
+  /// Detecta fotos nuevas en carpeta DCIM
+  Future<void> _checkForNewPhotos(String usbPath) async {
+    try {
+      final dcimDir = Directory('$usbPath/DCIM');
+      
+      if (!dcimDir.existsSync()) {
+        logger.w('DCIM folder not found at $usbPath');
+        return;
+      }
+      
+      final photos = dcimDir
+          .listSync(recursive: true)
+          .whereType<File>()
+          .where((f) => _isPhotoFile(f.path))
+          .toList();
+      
+      for (final photo in photos) {
+        final hash = await _calculateFileHash(photo);
+        
+        // Si ya fue subida, ignora
+        if (_uploadedHashes.contains(hash)) {
+          continue;
+        }
+        
+        // Nueva foto detectada
+        logger.i('New photo detected: ${photo.path}');
+        await _uploadPhoto(photo, hash);
+      }
+    } catch (e) {
+      lastError = e.toString();
+      logger.e('Error checking photos: $e');
+      notifyListeners();
+    }
+  }
+  
+  /// Sube foto al backend
+  Future<void> _uploadPhoto(File photo, String hash) async {
+    try {
+      photosInQueue++;
+      notifyListeners();
+      
+      final idempotencyKey = const Uuid().v4();
+      final bytes = await photo.readAsBytes();
+      
+      var request = http.MultipartRequest(
+        'POST',
+        Uri.parse('$serverUrl/api/ingest'),
+      );
+      
+      request.headers['Authorization'] = 'Bearer $eventToken';
+      request.fields['eventId'] = eventId;
+      request.fields['idempotencyKey'] = idempotencyKey;
+      request.fields['clientId'] = 'samsung-a16-auto';
+      request.files.add(http.MultipartFile.fromBytes(
+        'photo',
+        bytes,
+        filename: photo.path.split('/').last,
+      ));
+      
+      final response = await request.send();
+      
+      if (response.statusCode == 200) {
+        await _saveUploadedHash(hash);
+        photosUploaded++;
+        logger.i('Photo uploaded: ${photo.path}');
+      } else {
+        logger.e('Upload failed: ${response.statusCode}');
+        lastError = 'Upload failed: ${response.statusCode}';
+      }
+      
+      photosInQueue--;
+      notifyListeners();
+    } catch (e) {
+      lastError = e.toString();
+      logger.e('Error uploading photo: $e');
+      notifyListeners();
+    }
+  }
+  
+  /// Calcula hash SHA256 del archivo para deduplicación
+  Future<String> _calculateFileHash(File file) async {
+    final bytes = await file.readAsBytes();
+    return sha256.convert(bytes).toString();
+  }
+  
+  bool _isPhotoFile(String path) {
+    final extensions = ['jpg', 'jpeg', 'png', 'webp', 'heic'];
+    final ext = path.split('.').last.toLowerCase();
+    return extensions.contains(ext);
+  }
+  
+  /// Permite seleccionar carpeta USB manualmente
+  Future<String?> selectUsbFolder() async {
+    final result = await FilePicker.getDirectoryPath();
+    return result;
+  }
+}
