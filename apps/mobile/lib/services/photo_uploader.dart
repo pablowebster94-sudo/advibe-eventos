@@ -3,6 +3,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:crypto/crypto.dart';
 import 'package:http/http.dart' as http;
+import 'package:http_parser/http_parser.dart';
 import 'dart:io';
 import 'dart:async';
 import 'package:logger/logger.dart';
@@ -96,7 +97,6 @@ class PhotoUploader extends ChangeNotifier {
         final stat = photo.statSync();
         final key = '${photo.path}|${stat.size}|${stat.modified.millisecondsSinceEpoch}';
         if (_seenKeys.contains(key)) continue;
-        _seenKeys.add(key);
 
         final hash = await _calculateFileHash(photo);
         if (_uploadedHashes.contains(hash)) continue;
@@ -128,16 +128,27 @@ class PhotoUploader extends ChangeNotifier {
       request.fields['eventId'] = eventId;
       request.fields['idempotencyKey'] = idempotencyKey;
       request.fields['clientId'] = 'samsung-a16-auto';
+      final fname = photo.path.split('/').last;
+      final lower = fname.toLowerCase();
+      final mime = lower.endsWith('.png')
+          ? 'image/png'
+          : lower.endsWith('.webp')
+              ? 'image/webp'
+              : lower.endsWith('.heic')
+                  ? 'image/heic'
+                  : 'image/jpeg';
       request.files.add(http.MultipartFile.fromBytes(
         'photo',
         bytes,
-        filename: photo.path.split('/').last,
+        filename: fname,
+        contentType: MediaType.parse(mime),
       ));
 
       final response = await request.send();
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         await _saveUploadedHash(hash);
+        _seenKeys.add(_keyFor(photo));
         photosUploaded++;
         logger.i('Photo uploaded: ${photo.path}');
       } else {
@@ -149,10 +160,16 @@ class PhotoUploader extends ChangeNotifier {
       photosInQueue--;
       notifyListeners();
     } catch (e) {
+      photosInQueue--;
       lastError = e.toString();
       logger.e('Error uploading photo: $e');
       notifyListeners();
     }
+  }
+
+  String _keyFor(File f) {
+    final st = f.statSync();
+    return '${f.path}|${st.size}|${st.modified.millisecondsSinceEpoch}';
   }
 
   Future<String> _calculateFileHash(File file) async {
@@ -161,9 +178,12 @@ class PhotoUploader extends ChangeNotifier {
   }
 
   bool _isPhotoFile(String path) {
-    final extensions = ['jpg', 'jpeg', 'png', 'webp', 'heic'];
-    final ext = path.split('.').last.toLowerCase();
-    return extensions.contains(ext);
+    final name = path.split('/').last.toLowerCase();
+    // Ignora archivos ocultos y los que Android aun esta escribiendo
+    if (name.startsWith('.') || name.contains('.pending-')) return false;
+    if (name.endsWith('.arw') || name.endsWith('.raw') || name.endsWith('.dng')) return false;
+    return name.endsWith('.jpg') || name.endsWith('.jpeg') ||
+           name.endsWith('.png') || name.endsWith('.webp') || name.endsWith('.heic');
   }
 
   Future<String?> selectUsbFolder() async {
