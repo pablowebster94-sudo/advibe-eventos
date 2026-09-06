@@ -44,7 +44,7 @@ export async function processPhoto(
 
   // rotate() sin argumentos aplica la orientación EXIF y la descarta. Sin esto
   // las verticales del celular salen tumbadas en la galería.
-  const pipeline = await autoEdit(sharp(input, { failOn: "none" }).rotate());
+  const pipeline = sharp(input, { failOn: "none" }).rotate();
 
   const full = await pipeline
     .clone()
@@ -71,38 +71,6 @@ export async function processPhoto(
     height: full.info.height,
     bytes: full.data.byteLength,
   };
-}
-
-
-/**
- * Auto-edicion adaptativa: analiza la foto y corrige exposicion, balance y
- * contraste segun lo que necesite. Pensado para eventos con luz irregular.
- */
-async function autoEdit(img: sharp.Sharp): Promise<sharp.Sharp> {
-  const stats = await img.clone().stats();
-
-  // Luminancia media aproximada (0-255) ponderando los canales RGB
-  const [r, g, b] = stats.channels;
-  const luma = 0.299 * r.mean + 0.587 * g.mean + 0.114 * b.mean;
-
-  // Brillo: sube las oscuras, baja las quemadas. Objetivo ~118.
-  let brightness = 1.0;
-  if (luma < 100) brightness = Math.min(1.35, 118 / Math.max(luma, 40));
-  else if (luma > 165) brightness = Math.max(0.85, 150 / luma);
-
-  // Saturacion: si la foto ya viene saturada no la empujamos mas.
-  const spread = Math.max(r.mean, g.mean, b.mean) - Math.min(r.mean, g.mean, b.mean);
-  const saturation = spread > 28 ? 1.0 : 1.12;
-
-  // Sin normalise(): estira cada canal por separado y mete tinte de color.
-  let out = img.modulate({ brightness, saturation });
-
-  // Curva de contraste suave en S, y nitidez ligera para compensar el resize.
-  out = out
-    .linear(1.06, -8)
-    .sharpen({ sigma: 0.6, m1: 0.5, m2: 0.7 });
-
-  return out;
 }
 
 /** Sello de marca discreto abajo a la derecha. Vacío si el evento no define marca. */
