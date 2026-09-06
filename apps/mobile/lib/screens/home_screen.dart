@@ -44,9 +44,9 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _init() async {
     prefs = await SharedPreferences.getInstance();
-    serverController.text = prefs!.getString('cfg_server') ?? 'http://192.168.1.7:3300';
-    tokenController.text = prefs!.getString('cfg_token') ?? 'KO00hH5dOHuh';
-    eventIdController.text = prefs!.getString('cfg_event_id') ?? 'cmt42cyva0000gs240hil9f9l';
+    serverController.text = prefs!.getString('cfg_server') ?? 'https://backend-production-8a2a.up.railway.app';
+    tokenController.text = prefs!.getString('cfg_token') ?? 'MmiZ8Ar9QBbO';
+    eventIdController.text = prefs!.getString('cfg_event_id') ?? 'cmtp9fckd0000mx45al5u3vu6';
     final running = await FlutterForegroundTask.isRunningService;
     setState(() {
       selectedPath = prefs!.getString('cfg_path');

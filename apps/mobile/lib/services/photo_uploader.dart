@@ -13,9 +13,9 @@ class PhotoUploader extends ChangeNotifier {
   final logger = Logger();
   late SharedPreferences _prefs;
 
-  String serverUrl = 'http://192.168.1.7:3300';
-  String eventToken = 'KO00hH5dOHuh';
-  String eventId = 'cmt42cyva0000gs240hil9f9l';
+  String serverUrl = 'https://backend-production-8a2a.up.railway.app';
+  String eventToken = 'MmiZ8Ar9QBbO';
+  String eventId = 'cmtp9fckd0000mx45al5u3vu6';
 
   int photosInQueue = 0;
   int photosUploaded = 0;

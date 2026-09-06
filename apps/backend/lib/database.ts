@@ -1,7 +1,7 @@
 import Database from "better-sqlite3";
 import path from "path";
 
-const dbPath = path.join(process.cwd(), "../../data/advibe.db");
+const dbPath = process.env.DB_PATH || path.join(process.cwd(), "../../data/advibe.db");
 let db: Database.Database | null = null;
 
 function getDb(): Database.Database {
