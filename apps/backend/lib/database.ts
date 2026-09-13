@@ -131,7 +131,11 @@ export const database = {
       const stmt = db.prepare(
         "INSERT INTO Photo (id, eventId, idempotencyKey, clientId, filename, thumbFilename, width, height, bytes, capturedAt, createdAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)"
       );
-      stmt.run(id, eventId, idempotencyKey, clientId, filename, thumbFilename, width, height, bytes, capturedAt || null);
+      // better-sqlite3 solo enlaza números, textos, bigints, buffers y null: un Date
+      // hace fallar el INSERT entero. La PWA manda capturedAt en todas las subidas,
+      // así que aquí se guarda como texto ISO y findUnique lo vuelve a leer como Date.
+      const capturedAtValue = capturedAt ? new Date(capturedAt).toISOString() : null;
+      stmt.run(id, eventId, idempotencyKey, clientId, filename, thumbFilename, width, height, bytes, capturedAtValue);
 
       return database.photo.findUnique({ where: { id } })!;
     },
