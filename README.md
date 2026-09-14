@@ -117,42 +117,88 @@ Lee `TESTING.md` para testing en hardware.
 
 ## Producción sin llevar la Mac al evento
 
-El despliegue recomendado es **Railway** con dos servicios del mismo repositorio:
+El despliegue es **Railway**, con dos servicios del mismo repositorio:
 
 - **backend**: Next.js + SQLite + Sharp + almacenamiento de fotos.
 - **capture**: PWA de captura.
-- **Volume del backend** montado en `/app/data` para que la base SQLite y las fotos sobrevivan a redeploys. Railway documenta que el filesystem normal del servicio es efímero y que los datos persistentes deben ir en un Volume.
-- Genera un dominio público para cada servicio desde Networking.
+
+El filesystem de un servicio de Railway es efímero: se pierde en cada redeploy.
+La base SQLite y las fotos viven en un **Volume** montado en `/data`, y las dos
+rutas se inyectan por variable de entorno (`DB_PATH` y `DATA_DIR`), nunca
+hardcodeadas.
 
 ### Servicio backend
 
-Dockerfile: `apps/backend/Dockerfile`
+El build lo describe `railway.json` en la raíz del repositorio: builder
+`DOCKERFILE` sobre el `Dockerfile` de la raíz (no el de `apps/backend/`, que
+quedó del primer despliegue), healthcheck en `/api/health` y arranque con
+`npm run start --workspace @advibe/backend`.
+
+Volume montado en:
+
+```
+/data
+```
 
 Variables:
 
 ```
-DATABASE_PATH=/app/data/advibe.db
-DATA_DIR=/app/data/media
-PUBLIC_BASE_URL=https://TU-BACKEND.up.railway.app
+DB_PATH=/data/advibe.db
+DATA_DIR=/data/media
+PORT=3000
 ADMIN_TOKEN=<una-clave-larga-privada>
+PUBLIC_BASE_URL=https://TU-BACKEND.up.railway.app
 ALLOWED_ORIGINS=https://TU-CAPTURE.up.railway.app
 ```
 
-Añade un Volume al servicio con mount path:
+`PORT` va explícito para que el puerto del contenedor y el del dominio público
+coincidan sin depender de autodetección: el `Dockerfile` hace `EXPOSE 3000`.
+
+`lib/database.ts` acepta `DATABASE_PATH` o `DB_PATH`, y crea el directorio y el
+esquema si no existen: un Volume recién montado y vacío arranca solo, sin
+`prisma db push` ni ningún paso manual. `ALLOWED_ORIGINS` es opcional; si falta,
+el CORS del ingest queda abierto (`*`).
+
+Desde cero con el CLI, un comando por línea (zsh interactivo en macOS no
+interpreta `#` como comentario, así que estas líneas no llevan ninguno):
 
 ```
-/app/data
+railway init --name advibe-eventos
+railway add --service backend
+railway volume add --service backend --mount-path /data
+railway variables --service backend --set "DB_PATH=/data/advibe.db" --set "DATA_DIR=/data/media" --set "PORT=3000" --set "ADMIN_TOKEN=$ADMIN_TOKEN"
+railway up --detach --service backend
+railway domain --service backend --port 3000
+railway variables --service backend --set "PUBLIC_BASE_URL=https://EL-DOMINIO.up.railway.app"
+railway up --detach --service backend
 ```
 
-Health check:
+El segundo `railway up` es necesario: `PUBLIC_BASE_URL` sólo se conoce después
+de generar el dominio, y de ella salen las URLs de galería y QR.
+
+Comprobación de que el contenedor arrancó, el Volume montó y el esquema se creó:
 
 ```
-/api/health
+curl -s https://EL-DOMINIO.up.railway.app/api/health
 ```
+
+### Alta del evento en producción
+
+```
+curl -s -X POST https://EL-DOMINIO.up.railway.app/api/events -H "Authorization: Bearer $ADMIN_TOKEN" -H "Content-Type: application/json" -d '{"slug":"ruta-iglesias","name":"Ruta de las Iglesias - Beer Run 5K"}'
+```
+
+Devuelve `id`, `slug`, `token`, `galleryUrl` y `qrUrl`. El `token` se devuelve
+**una sola vez**, al crear el evento: no hay endpoint que lo liste después. Es
+lo que se teclea en la PWA de captura y lo que se configura en la app Flutter.
+
+Omitir `brandName` lo guarda como NULL, que es lo que se quiere cuando el sello
+sobre la foto es el logo del evento (`apps/backend/brand/logo-opt.png`) y no un
+texto: `lib/photos.ts` usa el logo si existe y sólo cae al texto si no lo hay.
 
 ### Servicio capture
 
-Dockerfile: `apps/capture/Dockerfile`
+Dockerfile: `apps/capture/Dockerfile`, configurado en los ajustes del servicio.
 
 Variable:
 
@@ -175,7 +221,7 @@ AdVibe Capture (Internet)
    ↓
 Backend AdVibe
    ↓
-/app/data  ← Volume persistente
+/data  ← Volume persistente
    ├── advibe.db
    └── media/
    ↓
