@@ -8,6 +8,13 @@ export default function Home() {
         La galería pública de cada evento vive en <code>/g/&lt;slug&gt;</code>. La
         PWA de captura corre aparte, en el puerto 3301.
       </p>
+      <p style={{ color: "var(--muted)", lineHeight: 1.6 }}>
+        Para montar un evento nuevo —y obtener su token y su QR— entra en{" "}
+        <a href="/nuevo" style={{ color: "#7cc4ff" }}>
+          /nuevo
+        </a>
+        .
+      </p>
     </main>
   );
 }

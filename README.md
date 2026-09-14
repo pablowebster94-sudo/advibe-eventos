@@ -72,10 +72,39 @@ SQLite en `./data/advibe.db`
 - Slug: `demo`
 - ID: `demo-event-id`
 
+## Crear un evento nuevo
+
+Desde la propia aplicación, sin terminal: abre `/nuevo` en el backend, escribe la
+clave de administración y el nombre del evento. La pantalla devuelve el **token**
+que el operador teclea en la PWA, el enlace de la galería y su **QR** listo para
+proyectar.
+
+La creación va detrás de `ADMIN_TOKEN` (ver `apps/backend/.env.example`), un
+credencial aparte del token de cada evento. **Si `ADMIN_TOKEN` no está
+configurado, la creación queda cerrada** y responde `503`: un despliegue público
+sin configurar no debe quedar como un formulario abierto donde cualquiera crea
+eventos.
+
+El token de un evento se muestra **una sola vez**, al crearlo. No hay endpoint
+que lo liste después.
+
+Equivalente por API:
+
+```bash
+curl -X POST https://TU_BACKEND/api/events \
+  -H "Authorization: Bearer $ADMIN_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"name":"Boda Ana y Luis","brandName":"AdVibe"}'
+```
+
+El `slug` es opcional: si falta, se deriva del nombre (`boda-ana-luis`).
+`npm run seed` sigue existiendo para levantar el evento de prueba en local.
+
 ## Endpoints
 
 | Método | Ruta | Auth | Descripción |
 |--------|------|------|---|
+| POST | `/api/events` | Bearer `ADMIN_TOKEN` | Crear evento |
 | POST | `/api/ingest` | Bearer | Upload foto |
 | GET | `/api/events/:slug/photos` | - | Listar fotos |
 | GET | `/api/events/:slug/stream` | - | SSE updates |
@@ -84,3 +113,77 @@ SQLite en `./data/advibe.db`
 ---
 
 Lee `TESTING.md` para testing en hardware.
+
+
+## Producción sin llevar la Mac al evento
+
+El despliegue recomendado es **Railway** con dos servicios del mismo repositorio:
+
+- **backend**: Next.js + SQLite + Sharp + almacenamiento de fotos.
+- **capture**: PWA de captura.
+- **Volume del backend** montado en `/app/data` para que la base SQLite y las fotos sobrevivan a redeploys. Railway documenta que el filesystem normal del servicio es efímero y que los datos persistentes deben ir en un Volume.
+- Genera un dominio público para cada servicio desde Networking.
+
+### Servicio backend
+
+Dockerfile: `apps/backend/Dockerfile`
+
+Variables:
+
+```
+DATABASE_PATH=/app/data/advibe.db
+DATA_DIR=/app/data/media
+PUBLIC_BASE_URL=https://TU-BACKEND.up.railway.app
+ADMIN_TOKEN=<una-clave-larga-privada>
+ALLOWED_ORIGINS=https://TU-CAPTURE.up.railway.app
+```
+
+Añade un Volume al servicio con mount path:
+
+```
+/app/data
+```
+
+Health check:
+
+```
+/api/health
+```
+
+### Servicio capture
+
+Dockerfile: `apps/capture/Dockerfile`
+
+Variable:
+
+```
+NEXT_PUBLIC_BACKEND_URL=https://TU-BACKEND.up.railway.app
+```
+
+Después genera el dominio público del servicio capture.
+
+### Flujo final
+
+```
+Sony ZV-E10
+   ↓
+Imaging Edge Mobile
+   ↓
+Samsung Galaxy A16
+   ↓
+AdVibe Capture (Internet)
+   ↓
+Backend AdVibe
+   ↓
+/app/data  ← Volume persistente
+   ├── advibe.db
+   └── media/
+   ↓
+Galería pública + QR
+```
+
+**No se necesita ninguna API de IA para AdVibe Eventos.**
+
+La Mac puede estar apagada durante el evento. El Samsung solo necesita Internet.
+
+El `ADMIN_TOKEN` sirve exclusivamente para crear eventos y nunca debe publicarse. El token de cada evento es la credencial que autoriza las subidas.
