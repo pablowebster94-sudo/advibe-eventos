@@ -14,8 +14,10 @@ COPY apps/capture ./apps/capture
 ENV NODE_ENV=production
 ENV HOSTNAME=0.0.0.0
 
+# Build the backend workspace
 RUN npm run build --workspace @advibe/backend
 
 EXPOSE 3000
 
 CMD ["npm", "run", "start", "--workspace", "@advibe/backend"]
+
