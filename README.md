@@ -113,3 +113,77 @@ El `slug` es opcional: si falta, se deriva del nombre (`boda-ana-luis`).
 ---
 
 Lee `TESTING.md` para testing en hardware.
+
+
+## Producción sin llevar la Mac al evento
+
+El despliegue recomendado es **Railway** con dos servicios del mismo repositorio:
+
+- **backend**: Next.js + SQLite + Sharp + almacenamiento de fotos.
+- **capture**: PWA de captura.
+- **Volume del backend** montado en `/app/data` para que la base SQLite y las fotos sobrevivan a redeploys. Railway documenta que el filesystem normal del servicio es efímero y que los datos persistentes deben ir en un Volume.
+- Genera un dominio público para cada servicio desde Networking.
+
+### Servicio backend
+
+Dockerfile: `apps/backend/Dockerfile`
+
+Variables:
+
+```
+DATABASE_PATH=/app/data/advibe.db
+DATA_DIR=/app/data/media
+PUBLIC_BASE_URL=https://TU-BACKEND.up.railway.app
+ADMIN_TOKEN=<una-clave-larga-privada>
+ALLOWED_ORIGINS=https://TU-CAPTURE.up.railway.app
+```
+
+Añade un Volume al servicio con mount path:
+
+```
+/app/data
+```
+
+Health check:
+
+```
+/api/health
+```
+
+### Servicio capture
+
+Dockerfile: `apps/capture/Dockerfile`
+
+Variable:
+
+```
+NEXT_PUBLIC_BACKEND_URL=https://TU-BACKEND.up.railway.app
+```
+
+Después genera el dominio público del servicio capture.
+
+### Flujo final
+
+```
+Sony ZV-E10
+   ↓
+Imaging Edge Mobile
+   ↓
+Samsung Galaxy A16
+   ↓
+AdVibe Capture (Internet)
+   ↓
+Backend AdVibe
+   ↓
+/app/data  ← Volume persistente
+   ├── advibe.db
+   └── media/
+   ↓
+Galería pública + QR
+```
+
+**No se necesita ninguna API de IA para AdVibe Eventos.**
+
+La Mac puede estar apagada durante el evento. El Samsung solo necesita Internet.
+
+El `ADMIN_TOKEN` sirve exclusivamente para crear eventos y nunca debe publicarse. El token de cada evento es la credencial que autoriza las subidas.
