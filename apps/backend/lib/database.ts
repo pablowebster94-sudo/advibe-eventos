@@ -1,13 +1,41 @@
 import Database from "better-sqlite3";
 import path from "path";
+import fs from "fs";
 
-const dbPath = process.env.DATABASE_PATH ?? path.join(process.cwd(), "../../data/advibe.db");
+const dbPath = process.env.DATABASE_PATH ?? process.env.DB_PATH ?? path.join(process.cwd(), "../../data/advibe.db");
+fs.mkdirSync(path.dirname(dbPath), { recursive: true });
 let db: Database.Database | null = null;
 
 function getDb(): Database.Database {
   if (!db) {
     db = new Database(dbPath);
     db.pragma("journal_mode = WAL");
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS Event (
+        id TEXT PRIMARY KEY,
+        slug TEXT NOT NULL UNIQUE,
+        name TEXT NOT NULL,
+        token TEXT NOT NULL UNIQUE,
+        brandName TEXT,
+        createdAt TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+      );
+      CREATE TABLE IF NOT EXISTS Photo (
+        id TEXT PRIMARY KEY,
+        eventId TEXT NOT NULL,
+        idempotencyKey TEXT NOT NULL,
+        clientId TEXT NOT NULL,
+        filename TEXT NOT NULL,
+        thumbFilename TEXT NOT NULL,
+        width INTEGER NOT NULL,
+        height INTEGER NOT NULL,
+        bytes INTEGER NOT NULL,
+        capturedAt TEXT,
+        createdAt TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (eventId) REFERENCES Event(id) ON DELETE CASCADE,
+        UNIQUE (eventId, idempotencyKey)
+      );
+      CREATE INDEX IF NOT EXISTS Photo_event_createdAt_idx ON Photo(eventId, createdAt);
+    `);
     db.pragma("foreign_keys = ON");
   }
   return db;
