@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import sharp from "sharp";
 import { MEDIA_DIR } from "./paths";
@@ -52,13 +52,9 @@ export async function processPhoto(
     .toBuffer({ resolveWithObject: true });
 
   const full = await sharp(resized.data)
-    .composite(await brandOverlay(opts.brandName, resized.info.width))
     .jpeg({ quality: 86, mozjpeg: true })
     .toBuffer({ resolveWithObject: true });
 
-  // La miniatura sale de la imagen YA sellada, no del original: así la marca
-  // se ve también en la parrilla de la galería, que es lo único que mira el
-  // cliente, y de paso escala sola en vez de necesitar su propio tamaño de letra.
   const thumb = await sharp(full.data)
     .resize({ width: 480, height: 480, fit: "inside", withoutEnlargement: true })
     .jpeg({ quality: 72, mozjpeg: true })
@@ -108,45 +104,3 @@ async function autoEdit(img: sharp.Sharp): Promise<sharp.Sharp> {
   return out;
 }
 
-/** Sello de marca: usa el logo PNG del evento si existe, si no cae al texto. */
-async function brandOverlay(
-  brandName: string | null | undefined,
-  photoWidth: number,
-): Promise<sharp.OverlayOptions[]> {
-  // El logo ocupa ~28% del ancho de la foto, abajo a la derecha.
-  const logoPath = path.join(process.cwd(), "brand", "logo-opt.png");
-  try {
-    const raw = await readFile(logoPath);
-    const target = Math.round(photoWidth * 0.28);
-    const logo = await sharp(raw)
-      .resize({ width: target })
-      .composite([{
-        input: Buffer.from([255, 255, 255, Math.round(255 * 0.9)]),
-        raw: { width: 1, height: 1, channels: 4 },
-        tile: true,
-        blend: "dest-in",
-      }])
-      .png()
-      .toBuffer();
-
-    return [{ input: logo, gravity: "southeast" }];
-  } catch {
-    // Sin logo: sello de texto como antes.
-    if (!brandName) return [];
-    const text = escapeXml(brandName);
-    const width = Math.max(180, text.length * 15 + 48);
-    const svg = `<svg width="${width}" height="64" xmlns="http://www.w3.org/2000/svg">
-      <text x="${width - 24}" y="40" text-anchor="end"
-            font-family="Helvetica, Arial, sans-serif" font-size="26" font-weight="600"
-            fill="#ffffff" fill-opacity="0.92"
-            style="paint-order:stroke;stroke:#000000;stroke-opacity:0.35;stroke-width:3px">${text}</text>
-    </svg>`;
-    return [{ input: Buffer.from(svg), gravity: "southeast" }];
-  }
-}
-
-function escapeXml(s: string) {
-  return s.replace(/[<>&'"]/g, (c) =>
-    ({ "<": "&lt;", ">": "&gt;", "&": "&amp;", "'": "&apos;", '"': "&quot;" })[c]!,
-  );
-}
