@@ -49,7 +49,7 @@ export async function processPhoto(
   if (opts.eventSlug === "ruta-iglesias") {
     try {
       const logo = await readFile(
-        path.join(process.cwd(), "apps/backend/public/ruta-iglesias-logo.webp"),
+        path.join(process.cwd(), "public/ruta-iglesias-logo.webp"),
       );
       const meta = await pipeline.metadata();
       const width = meta.width ?? 2048;
