@@ -168,6 +168,13 @@ export const database = {
       return database.photo.findUnique({ where: { id } })!;
     },
 
+    deleteMany: (opts: { where: { eventId: string } }): number => {
+      const db = getDb();
+      const stmt = db.prepare("DELETE FROM Photo WHERE eventId = ?");
+      const result = stmt.run(opts.where.eventId);
+      return result.changes;
+    },
+
     count: (opts: { where: { eventId: string } }): number => {
       const db = getDb();
       const stmt = db.prepare("SELECT COUNT(*) as count FROM Photo WHERE eventId = ?");

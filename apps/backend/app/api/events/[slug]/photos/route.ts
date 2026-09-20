@@ -71,7 +71,6 @@ export async function DELETE(
 
   const photos = await prisma.photo.findMany({
     where: { eventId: event.id },
-    select: { filename: true, thumbFilename: true },
   });
 
   await prisma.photo.deleteMany({ where: { eventId: event.id } });
