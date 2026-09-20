@@ -76,7 +76,7 @@ export async function POST(request: Request) {
 
   let processed;
   try {
-    processed = await processPhoto(buffer, { brandName: event.brandName });
+    processed = await processPhoto(buffer, { brandName: event.brandName, eventSlug: event.slug });
   } catch {
     return json(request, { ok: false, error: "unreadable_image" }, 415);
   }
