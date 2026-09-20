@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { mkdir, writeFile } from "node:fs/promises";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import sharp from "sharp";
 import { MEDIA_DIR } from "./paths";
@@ -34,7 +34,7 @@ export type Processed = {
  */
 export async function processPhoto(
   input: Buffer,
-  opts: { brandName?: string | null },
+  opts: { brandName?: string | null; eventSlug?: string | null },
 ): Promise<Processed> {
   const base = `${Date.now()}-${randomUUID().slice(0, 8)}`;
   const filename = `${base}.jpg`;
@@ -44,7 +44,26 @@ export async function processPhoto(
 
   // rotate() sin argumentos aplica la orientación EXIF y la descarta. Sin esto
   // las verticales del celular salen tumbadas en la galería.
-  const pipeline = await autoEdit(sharp(input, { failOn: "none" }).rotate());
+  let pipeline = await autoEdit(sharp(input, { failOn: "none" }).rotate());
+
+  if (opts.eventSlug === "ruta-iglesias") {
+    try {
+      const logo = await readFile(
+        path.join(process.cwd(), "apps/backend/public/ruta-iglesias-logo.webp"),
+      );
+      const meta = await pipeline.metadata();
+      const width = meta.width ?? 2048;
+      const logoWidth = Math.max(300, Math.min(520, Math.round(width * 0.22)));
+      const logoBuffer = await sharp(logo)
+        .resize({ width: logoWidth, withoutEnlargement: true })
+        .toBuffer();
+      pipeline = pipeline.composite([
+        { input: logoBuffer, gravity: "southeast" },
+      ]);
+    } catch (error) {
+      console.error("Ruta de las Iglesias logo error:", error);
+    }
+  }
 
   const resized = await pipeline
     .clone()
