@@ -6,7 +6,7 @@ const dbPath = process.env.DATABASE_PATH ?? process.env.DB_PATH ?? path.join(pro
 fs.mkdirSync(path.dirname(dbPath), { recursive: true });
 let db: Database.Database | null = null;
 
-function getDb(): Database.Database {
+export function getDb(): Database.Database {
   if (!db) {
     db = new Database(dbPath);
     db.pragma("journal_mode = WAL");
