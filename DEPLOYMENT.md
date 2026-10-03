@@ -13,7 +13,7 @@
 
 1. In Railway dashboard, create new service from GitHub
 2. Select `advibe-eventos` repository
-3. **Set Dockerfile path**: `apps/backend/Dockerfile`
+3. Build config comes from `railway.json` (root `Dockerfile`, builds the backend by default)
 4. Configure environment variables:
    ```
    DATABASE_PATH=/app/data/advibe.db
@@ -39,9 +39,10 @@
 #### 2. Create Capture Service
 
 1. Create new service from same repository
-2. **Set Dockerfile path**: `apps/capture/Dockerfile`
-3. Configure environment variable:
+2. Build config comes from `railway.json`; select the app with a variable
+3. Configure environment variables:
    ```
+   APP=capture
    NEXT_PUBLIC_BACKEND_URL=https://your-backend-domain.up.railway.app
    NODE_ENV=production
    PORT=3301
