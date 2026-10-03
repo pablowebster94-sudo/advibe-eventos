@@ -89,6 +89,11 @@ class UploadTaskHandler extends TaskHandler {
         .whereType<File>()
         .where((f) => _isPhoto(f.path))
         .toList();
+    if (photos.isEmpty) {
+      _lastError = 'Sin fotos en ${dir.path} (¿carpeta correcta y permiso de archivos?)';
+      return;
+    }
+    if (_lastError?.startsWith('Sin fotos') ?? false) _lastError = null;
 
     for (final photo in photos) {
       final bytes = await photo.readAsBytes();

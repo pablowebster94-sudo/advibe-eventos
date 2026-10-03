@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_foreground_task/flutter_foreground_task.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../services/upload_service.dart';
 
@@ -83,6 +84,16 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _start() async {
     await _saveConfig();
+    // Sin "acceso a todos los archivos" Android no deja listar la carpeta de la
+    // cámara: el escaneo no ve fotos y no sube nada, sin dar ningún error.
+    if (Platform.isAndroid && !await Permission.manageExternalStorage.isGranted) {
+      final status = await Permission.manageExternalStorage.request();
+      if (!status.isGranted) {
+        setState(() => lastError =
+            'Falta permiso: Ajustes > Apps > AdVibe Auto Upload > Permisos > Archivos > Permitir todos');
+        return;
+      }
+    }
     await FlutterForegroundTask.requestNotificationPermission();
     await FlutterForegroundTask.startService(
       serviceTypes: [ForegroundServiceTypes.dataSync],
