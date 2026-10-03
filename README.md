@@ -101,13 +101,24 @@ El `slug` es opcional: si falta, se deriva del nombre (`boda-ana-luis`).
 `npm run seed` levanta en local el evento en curso (Circuito Gualaceo); para otro,
 `SEED_SLUG=mi-evento SEED_NAME="Mi evento" npm run seed`.
 
+## Descargar las fotos de un evento
+
+Antes de apagar el servidor (por ejemplo, al acabar la prueba de Railway):
+
+```bash
+node tools/descargar-fotos.mjs --base https://TU-BACKEND.up.railway.app --slug circuito-gualaceo
+```
+
+Baja todas las fotos a `fotos-circuito-gualaceo/`. Si se corta, se relanza y solo
+baja las que faltan.
+
 ## Endpoints
 
 | Método | Ruta | Auth | Descripción |
 |--------|------|------|---|
 | POST | `/api/events` | Bearer `ADMIN_TOKEN` | Crear evento |
 | POST | `/api/ingest` | Bearer | Upload foto |
-| GET | `/api/events/:slug/photos` | - | Listar fotos |
+| GET | `/api/events/:slug/photos?limit=&offset=` | - | Listar fotos (máx. 500 por página) |
 | GET | `/api/events/:slug/stream` | - | SSE updates |
 | GET | `/api/events/:slug/qr` | - | QR generador |
 
