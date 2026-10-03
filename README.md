@@ -17,6 +17,15 @@ Esto inicia backend y PWA automáticamente. Luego abre en Samsung:
 http://TU_IP:3301
 ```
 
+## Día de evento (galería en Railway, captura en la Mac)
+
+```bash
+cd ~/advibe-eventos && git pull && ./evento.sh
+```
+
+Prepara la PWA apuntando al backend de Railway y muestra la dirección que se
+abre en el celular, más la galería y el QR del evento.
+
 ## Arquitectura
 
 ```
