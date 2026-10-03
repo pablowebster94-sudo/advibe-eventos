@@ -1,4 +1,6 @@
-FROM node:22-bookworm-slim
+# Imagen completa, no -slim: better-sqlite3 13 se compila siempre desde el código
+# fuente (no trae binarios precompilados) y necesita python3, make y g++.
+FROM node:22-bookworm
 
 WORKDIR /app
 
