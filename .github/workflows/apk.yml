@@ -1,0 +1,48 @@
+# Compila la app Android (apps/mobile) y la publica como descarga directa:
+#   https://github.com/pablowebster94-sudo/advibe-eventos/releases/latest/download/advibe-auto-upload.apk
+# Se abre ese link en el Samsung y se instala el APK.
+name: APK Android
+
+on:
+  push:
+    paths:
+      - "apps/mobile/**"
+      - ".github/workflows/apk.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/mobile
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - run: flutter pub get
+      - run: flutter build apk --release
+
+      - run: cp build/app/outputs/flutter-apk/app-release.apk advibe-auto-upload.apk
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: apk-latest
+          name: AdVibe Auto Upload (APK)
+          make_latest: true
+          files: apps/mobile/advibe-auto-upload.apk
+          body: |
+            Abre este link en el Samsung para descargar e instalar la app:
+            https://github.com/${{ github.repository }}/releases/latest/download/advibe-auto-upload.apk
