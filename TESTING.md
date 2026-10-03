@@ -83,14 +83,14 @@ En Chrome (3 puntos arriba-derecha):
 Abre en navegador:
 
 ```
-http://localhost:3300/g/demo
+http://localhost:3300/g/circuito-gualaceo
 ```
 
 ✅ Deberías ver la foto que subiste.
 
 ## PASO 8: VERIFICA SSE (EN VIVO)
 
-1. Mantén abierto `http://localhost:3300/g/demo` en la Mac
+1. Mantén abierto `http://localhost:3300/g/circuito-gualaceo` en la Mac
 2. Sube otra foto desde Samsung
 3. La galería se actualiza SIN recargar
 
@@ -124,9 +124,8 @@ curl http://localhost:3300
 - Prueba manual:
 ```bash
 curl -X POST http://localhost:3300/api/ingest \
-  -H "Authorization: Bearer KO00hH5dOHuh" \
+  -H "Authorization: Bearer TOKEN_DEL_EVENTO" \
   -F "photo=@foto.jpg;type=image/jpeg" \
-  -F "eventId=demo-event-id" \
   -F "idempotencyKey=$(uuidgen)" \
   -F "clientId=samsung-test"
 ```
@@ -139,7 +138,7 @@ curl -X POST http://localhost:3300/api/ingest \
 [ ] Chrome flag configurada en Samsung
 [ ] PWA instalada en Samsung
 [ ] Foto subida desde Samsung
-[ ] Foto visible en http://localhost:3300/g/demo
+[ ] Foto visible en http://localhost:3300/g/circuito-gualaceo
 [ ] SSE funciona (actualización en vivo)
 [ ] Deduplicación funciona (rechazo de duplicado)
 ```

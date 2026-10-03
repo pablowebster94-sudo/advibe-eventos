@@ -26,7 +26,7 @@ PWA AdVibe Capture (3301)
   ↓ (POST /api/ingest)
 Backend Next.js (3300)
   ↓ (SQLite + Sharp)
-Galería pública (/g/demo)
+Galería pública (/g/circuito-gualaceo)
 ```
 
 ## Testing en Samsung
@@ -42,7 +42,7 @@ cat TESTING.md
 2. Chrome flag en Samsung: `chrome://flags/#unsafely-treat-insecure-origin-as-secure`
 3. Abre `http://IP:3301` → Instala como PWA
 4. Comparte foto desde Galería
-5. Verifica en Mac: `http://localhost:3300/g/demo`
+5. Verifica en Mac: `http://localhost:3300/g/circuito-gualaceo`
 
 ## Build Producción
 
@@ -67,10 +67,10 @@ Ambos compilan exitosamente sin errores.
 
 SQLite en `./data/advibe.db`
 
-**Evento demo:**
-- Token: `KO00hH5dOHuh`
-- Slug: `demo`
-- ID: `demo-event-id`
+**Evento en curso: Circuito Gualaceo**
+- Slug: `circuito-gualaceo`
+- Galería: `/g/circuito-gualaceo`
+- Token: lo imprime `npm run seed` (en local) o `/nuevo` (en producción), una sola vez
 
 ## Crear un evento nuevo
 
@@ -98,7 +98,8 @@ curl -X POST https://TU_BACKEND/api/events \
 ```
 
 El `slug` es opcional: si falta, se deriva del nombre (`boda-ana-luis`).
-`npm run seed` sigue existiendo para levantar el evento de prueba en local.
+`npm run seed` levanta en local el evento en curso (Circuito Gualaceo); para otro,
+`SEED_SLUG=mi-evento SEED_NAME="Mi evento" npm run seed`.
 
 ## Endpoints
 
