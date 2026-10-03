@@ -6,7 +6,7 @@ const dbPath = process.env.DATABASE_PATH ?? process.env.DB_PATH ?? path.join(pro
 fs.mkdirSync(path.dirname(dbPath), { recursive: true });
 let db: Database.Database | null = null;
 
-function getDb(): Database.Database {
+export function getDb(): Database.Database {
   if (!db) {
     db = new Database(dbPath);
     db.pragma("journal_mode = WAL");
@@ -137,13 +137,14 @@ export const database = {
       };
     },
 
-    findMany: (opts: { where: { eventId: string }; orderBy?: { createdAt: string }; take?: number }): Photo[] => {
+    findMany: (opts: { where: { eventId: string }; orderBy?: { createdAt: string }; take?: number; skip?: number }): Photo[] => {
       const db = getDb();
       const order = opts.orderBy?.createdAt === "desc" ? "DESC" : "ASC";
-      const limit = opts.take ? `LIMIT ${opts.take}` : "";
-      const query = `SELECT * FROM Photo WHERE eventId = ? ORDER BY createdAt ${order} ${limit}`;
+      // `id` desempata fotos del mismo segundo: sin él, paginar con skip puede
+      // repetir o saltarse fotos entre páginas.
+      const query = `SELECT * FROM Photo WHERE eventId = ? ORDER BY createdAt ${order}, id ${order} LIMIT ? OFFSET ?`;
       const stmt = db.prepare(query);
-      const rows = stmt.all(opts.where.eventId) as any[];
+      const rows = stmt.all(opts.where.eventId, opts.take ?? -1, opts.skip ?? 0) as any[];
 
       return rows.map((row) => ({
         ...row,

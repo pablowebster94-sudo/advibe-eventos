@@ -12,6 +12,8 @@ if [ ! -d "node_modules" ]; then
     exit 1
 fi
 
+EVENT_SLUG="${EVENT_SLUG:-circuito-gualaceo}"
+
 # Obtén IP local
 IP=$(ifconfig 2>/dev/null | grep "inet 192" | head -1 | awk '{print $2}' || echo "")
 
@@ -26,7 +28,7 @@ echo "════════════════════════�
 echo "📱 IP de tu Mac: $IP"
 echo "\n✅ Backend:  http://$IP:3300"
 echo "✅ PWA:      http://$IP:3301"
-echo "✅ Galería:  http://localhost:3300/g/demo\n"
+echo "✅ Galería:  http://localhost:3300/g/$EVENT_SLUG\n"
 echo "En el Samsung usa:  http://$IP:3301\n"
 
 # Cleanup en caso de cierre

@@ -3,9 +3,9 @@ import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
-/** Crea (o reusa) un evento de prueba y escupe su token por stdout. */
+/** Crea (o reusa) el evento en curso y escupe su token por stdout. */
 async function main() {
-  const slug = process.env.SEED_SLUG ?? "demo";
+  const slug = process.env.SEED_SLUG ?? "circuito-gualaceo";
   const existing = await prisma.event.findUnique({ where: { slug } });
 
   const event =
@@ -13,7 +13,7 @@ async function main() {
     (await prisma.event.create({
       data: {
         slug,
-        name: process.env.SEED_NAME ?? "Evento de prueba AdVibe",
+        name: process.env.SEED_NAME ?? "Circuito Gualaceo",
         brandName: process.env.SEED_BRAND ?? "AdVibe",
         token: randomBytes(9).toString("base64url"),
       },

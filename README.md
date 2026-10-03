@@ -26,7 +26,7 @@ PWA AdVibe Capture (3301)
   ↓ (POST /api/ingest)
 Backend Next.js (3300)
   ↓ (SQLite + Sharp)
-Galería pública (/g/demo)
+Galería pública (/g/circuito-gualaceo)
 ```
 
 ## Testing en Samsung
@@ -42,7 +42,7 @@ cat TESTING.md
 2. Chrome flag en Samsung: `chrome://flags/#unsafely-treat-insecure-origin-as-secure`
 3. Abre `http://IP:3301` → Instala como PWA
 4. Comparte foto desde Galería
-5. Verifica en Mac: `http://localhost:3300/g/demo`
+5. Verifica en Mac: `http://localhost:3300/g/circuito-gualaceo`
 
 ## Build Producción
 
@@ -67,10 +67,10 @@ Ambos compilan exitosamente sin errores.
 
 SQLite en `./data/advibe.db`
 
-**Evento demo:**
-- Token: `KO00hH5dOHuh`
-- Slug: `demo`
-- ID: `demo-event-id`
+**Evento en curso: Circuito Gualaceo**
+- Slug: `circuito-gualaceo`
+- Galería: `/g/circuito-gualaceo`
+- Token: lo imprime `npm run seed` (en local) o `/nuevo` (en producción), una sola vez
 
 ## Crear un evento nuevo
 
@@ -98,7 +98,19 @@ curl -X POST https://TU_BACKEND/api/events \
 ```
 
 El `slug` es opcional: si falta, se deriva del nombre (`boda-ana-luis`).
-`npm run seed` sigue existiendo para levantar el evento de prueba en local.
+`npm run seed` levanta en local el evento en curso (Circuito Gualaceo); para otro,
+`SEED_SLUG=mi-evento SEED_NAME="Mi evento" npm run seed`.
+
+## Descargar las fotos de un evento
+
+Antes de apagar el servidor (por ejemplo, al acabar la prueba de Railway):
+
+```bash
+node tools/descargar-fotos.mjs --base https://TU-BACKEND.up.railway.app --slug circuito-gualaceo
+```
+
+Baja todas las fotos a `fotos-circuito-gualaceo/`. Si se corta, se relanza y solo
+baja las que faltan.
 
 ## Endpoints
 
@@ -106,7 +118,7 @@ El `slug` es opcional: si falta, se deriva del nombre (`boda-ana-luis`).
 |--------|------|------|---|
 | POST | `/api/events` | Bearer `ADMIN_TOKEN` | Crear evento |
 | POST | `/api/ingest` | Bearer | Upload foto |
-| GET | `/api/events/:slug/photos` | - | Listar fotos |
+| GET | `/api/events/:slug/photos?limit=&offset=` | - | Listar fotos (máx. 500 por página) |
 | GET | `/api/events/:slug/stream` | - | SSE updates |
 | GET | `/api/events/:slug/qr` | - | QR generador |
 

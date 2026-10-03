@@ -14,10 +14,10 @@ export async function GET(
   { params }: { params: Promise<{ slug: string }> },
 ) {
   const { slug } = await params;
-  const limit = Math.min(
-    Number(new URL(request.url).searchParams.get("limit") ?? 200) || 200,
-    500,
-  );
+  const search = new URL(request.url).searchParams;
+  const limit = Math.min(Number(search.get("limit") ?? 200) || 200, 500);
+  // Para recorrer eventos de más de 500 fotos (p. ej. tools/descargar-fotos.mjs).
+  const offset = Math.max(Math.floor(Number(search.get("offset") ?? 0)) || 0, 0);
 
   const event = await prisma.event.findUnique({ where: { slug } });
   if (!event) return json(request, { ok: false, error: "not_found" }, 404);
@@ -26,6 +26,7 @@ export async function GET(
     where: { eventId: event.id },
     orderBy: { createdAt: "desc" },
     take: limit,
+    skip: offset,
   });
 
   return json(request, {
