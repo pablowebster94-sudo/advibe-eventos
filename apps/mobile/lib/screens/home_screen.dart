@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_foreground_task/flutter_foreground_task.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../services/upload_service.dart';
 
@@ -17,7 +18,10 @@ class _HomeScreenState extends State<HomeScreen> {
   final tokenController = TextEditingController();
   final eventIdController = TextEditingController();
 
+  static const _defaultPath = '/storage/emulated/0/DCIM/Imaging Edge Mobile';
+
   String? selectedPath;
+  bool onlyNew = true;
   bool isRunning = false;
   int uploaded = 0;
   int queue = 0;
@@ -44,12 +48,14 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _init() async {
     prefs = await SharedPreferences.getInstance();
-    serverController.text = prefs!.getString('cfg_server') ?? 'https://backend-production-8a2a.up.railway.app';
-    tokenController.text = prefs!.getString('cfg_token') ?? 'MmiZ8Ar9QBbO';
-    eventIdController.text = prefs!.getString('cfg_event_id') ?? 'cmtp9fckd0000mx45al5u3vu6';
+    // Evento actual: Baby Shower Amy -> /g/baby-shower-amy
+    serverController.text = prefs!.getString('cfg_server') ?? 'https://backend-production-09a24.up.railway.app';
+    tokenController.text = prefs!.getString('cfg_token') ?? 'E4AEdjxHMJqN';
+    eventIdController.text = prefs!.getString('cfg_event_id') ?? 'cmwq17wlm00000emofpyw2k92';
     final running = await FlutterForegroundTask.isRunningService;
     setState(() {
-      selectedPath = prefs!.getString('cfg_path');
+      selectedPath = prefs!.getString('cfg_path') ?? _defaultPath;
+      onlyNew = prefs!.getBool('cfg_only_new') ?? true;
       uploaded = prefs!.getInt('stat_uploaded') ?? 0;
       isRunning = running;
     });
@@ -79,9 +85,21 @@ class _HomeScreenState extends State<HomeScreen> {
     await prefs!.setString('cfg_token', tokenController.text.trim());
     await prefs!.setString('cfg_event_id', eventIdController.text.trim());
     if (selectedPath != null) await prefs!.setString('cfg_path', selectedPath!);
+    await prefs!.setBool('cfg_only_new', onlyNew);
+  }
+
+  void _snack(String msg) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
   }
 
   Future<void> _start() async {
+    // Sin "Acceso a todos los archivos" Android no deja leer DCIM/Imaging Edge Mobile.
+    if (!await Permission.manageExternalStorage.isGranted) {
+      _snack('Activa "Permitir acceso a todos los archivos" y vuelve a tocar Iniciar');
+      await Permission.manageExternalStorage.request();
+      if (!await Permission.manageExternalStorage.isGranted) return;
+    }
     await _saveConfig();
     await FlutterForegroundTask.requestNotificationPermission();
     await FlutterForegroundTask.startService(
@@ -207,7 +225,15 @@ class _HomeScreenState extends State<HomeScreen> {
               Text(selectedPath!,
                   style: TextStyle(fontSize: 12, color: Colors.grey[600])),
             ],
-            const SizedBox(height: 24),
+            const SizedBox(height: 8),
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              title: const Text('Solo fotos nuevas'),
+              subtitle: const Text('Ignora las fotos que ya estaban en la carpeta al iniciar el evento'),
+              value: onlyNew,
+              onChanged: isRunning ? null : (v) => setState(() => onlyNew = v),
+            ),
+            const SizedBox(height: 16),
 
             Row(
               children: [

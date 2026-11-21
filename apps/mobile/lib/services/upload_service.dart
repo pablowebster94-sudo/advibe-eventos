@@ -24,6 +24,8 @@ class UploadTaskHandler extends TaskHandler {
   bool _busy = false;
 
   Set<String> _uploadedHashes = {};
+  // "ruta|tamaño" de archivos ya resueltos (subidos u omitidos): no se vuelven a leer.
+  Set<String> _doneFiles = {};
   SharedPreferences? _prefs;
 
   @override
@@ -35,7 +37,37 @@ class UploadTaskHandler extends TaskHandler {
     _eventId = _prefs!.getString('cfg_event_id') ?? '';
     _watchPath = _prefs!.getString('cfg_path') ?? '';
     _uploadedHashes = (_prefs!.getStringList('uploaded_hashes') ?? []).toSet();
+    _doneFiles = (_prefs!.getStringList('done_files') ?? []).toSet();
     _uploaded = _prefs!.getInt('stat_uploaded') ?? 0;
+    await _baselineIfNeeded();
+  }
+
+  String _fileKey(File f) => '${f.path}|${f.lengthSync()}';
+
+  List<File> _listPhotos(Directory dir) => dir
+      .listSync(recursive: true)
+      .whereType<File>()
+      .where((f) => _isPhoto(f.path))
+      .toList();
+
+  /// La primera vez que se inicia un evento, las fotos que YA estaban en la
+  /// carpeta (de eventos anteriores) se marcan como vistas y no se suben.
+  Future<void> _baselineIfNeeded() async {
+    final onlyNew = _prefs!.getBool('cfg_only_new') ?? true;
+    final flag = 'baseline_$_eventId';
+    if (!onlyNew || (_prefs!.getBool(flag) ?? false)) return;
+    try {
+      final dir = _resolveDir();
+      if (dir.existsSync()) {
+        for (final f in _listPhotos(dir)) {
+          _doneFiles.add(_fileKey(f));
+        }
+        await _prefs!.setStringList('done_files', _doneFiles.toList());
+      }
+      await _prefs!.setBool(flag, true);
+    } catch (e) {
+      _lastError = 'Baseline: $e';
+    }
   }
 
   @override
@@ -84,16 +116,24 @@ class UploadTaskHandler extends TaskHandler {
       return;
     }
 
-    final photos = dir
-        .listSync(recursive: true)
-        .whereType<File>()
-        .where((f) => _isPhoto(f.path))
-        .toList();
+    final photos = _listPhotos(dir);
 
     for (final photo in photos) {
+      String? key;
+      try {
+        key = _fileKey(photo);
+      } catch (_) {
+        key = null; // el archivo desapareció entre el listado y la lectura
+      }
+      if (key == null || _doneFiles.contains(key)) continue;
+
       final bytes = await photo.readAsBytes();
       final hash = sha256.convert(bytes).toString();
-      if (_uploadedHashes.contains(hash)) continue;
+      if (_uploadedHashes.contains(hash)) {
+        _doneFiles.add(key);
+        await _prefs!.setStringList('done_files', _doneFiles.toList());
+        continue;
+      }
 
       _queue++;
       _send();
@@ -102,7 +142,9 @@ class UploadTaskHandler extends TaskHandler {
       if (ok) {
         _uploaded++;
         _uploadedHashes.add(hash);
+        _doneFiles.add(key);
         await _prefs!.setStringList('uploaded_hashes', _uploadedHashes.toList());
+        await _prefs!.setStringList('done_files', _doneFiles.toList());
         await _prefs!.setInt('stat_uploaded', _uploaded);
         _lastError = null;
       }
